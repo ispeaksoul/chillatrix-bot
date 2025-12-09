@@ -1,6 +1,4 @@
-const { SlashCommandBuilder } = require('discord.js');
-const { MessageFlags } = require('discord.js');
-
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -16,14 +14,22 @@ module.exports = {
         .setRequired(true)),
   async execute(interaction) {
     const user = interaction.options.getUser('target');
-    const message = interaction.options.getString('message');
+    const messageContent = interaction.options.getString('message');
+
+    if (!user) {
+      return interaction.reply({ content: '❌ Could not find that user.', flags: MessageFlags.Ephemeral });
+    }
 
     try {
-      await user.send(message);
+      await user.send(messageContent);
       await interaction.reply({ content: `📩 Message sent to ${user.tag}`, flags: MessageFlags.Ephemeral });
     } catch (error) {
       console.error('DM error:', error);
-      await interaction.reply({ content: `❌ Failed to send a DM to ${user.tag}. They might have DMs disabled.`, flags: MessageFlags.Ephemeral });
+      if (error.code === 50007) {
+        await interaction.reply({ content: `❌ Cannot send DM to ${user.tag}. They may have DMs disabled or have blocked the bot.`, flags: MessageFlags.Ephemeral });
+      } else {
+        await interaction.reply({ content: `❌ Failed to send a DM to ${user.tag}.`, flags: MessageFlags.Ephemeral });
+      }
     }
   }
 };

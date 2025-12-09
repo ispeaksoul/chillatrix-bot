@@ -1,12 +1,9 @@
 const { hasRequiredRole, hasAdminPermission } = require('../utils/permissions');
-const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
-const { MessageFlags } = require('discord.js');
-
+const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, MessageFlags } = require('discord.js');
 
 module.exports = {
   name: 'interactionCreate',
   async execute(interaction, client) {
-    // Handle slash commands
     if (interaction.isChatInputCommand()) {
       const command = client.commands.get(interaction.commandName);
       if (!command) return;
@@ -19,12 +16,19 @@ module.exports = {
       try {
         await command.execute(interaction, client);
       } catch (error) {
-        console.error(error);
-        await interaction.reply({ content: '❌ Error executing command.', flags: MessageFlags.Ephemeral });
+        console.error('Command execution error:', error);
+        try {
+          if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: '❌ Error executing command.', flags: MessageFlags.Ephemeral });
+          } else {
+            await interaction.reply({ content: '❌ Error executing command.', flags: MessageFlags.Ephemeral });
+          }
+        } catch (replyError) {
+          console.error('Failed to send error reply:', replyError);
+        }
       }
     }
 
-    // Handle "Reply" button click from mod channel
     if (interaction.isButton() && interaction.customId.startsWith('reply_')) {
       const userId = interaction.customId.split('_')[1];
 
@@ -44,7 +48,6 @@ module.exports = {
       return interaction.showModal(modal);
     }
 
-    // Handle modal submission with the reply
     if (interaction.isModalSubmit() && interaction.customId.startsWith('modal_reply_')) {
       const userId = interaction.customId.split('_')[2];
       const replyContent = interaction.fields.getTextInputValue('reply_message');
@@ -55,7 +58,15 @@ module.exports = {
         await interaction.reply({ content: `✅ Replied to ${user.tag}`, flags: MessageFlags.Ephemeral });
       } catch (err) {
         console.error('Failed to send DM:', err);
-        await interaction.reply({ content: '❌ Could not DM the user.', flags: MessageFlags.Ephemeral });
+        try {
+          if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: '❌ Could not DM the user.', flags: MessageFlags.Ephemeral });
+          } else {
+            await interaction.reply({ content: '❌ Could not DM the user.', flags: MessageFlags.Ephemeral });
+          }
+        } catch (replyError) {
+          console.error('Failed to send error reply:', replyError);
+        }
       }
     }
   }

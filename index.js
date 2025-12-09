@@ -7,11 +7,12 @@ const client = new Client({
   intents: [
     IntentsBitField.Flags.Guilds,
     IntentsBitField.Flags.GuildMessages,
-    IntentsBitField.Flags.GuildMembers, // ✅ Required to receive join events
+    IntentsBitField.Flags.GuildMembers,
+    IntentsBitField.Flags.GuildVoiceStates,
     IntentsBitField.Flags.MessageContent,
     IntentsBitField.Flags.DirectMessages,
   ],
-  partials: [Partials.Channel, Partials.Message], // Required to receive DMs
+  partials: [Partials.Channel, Partials.Message, Partials.User, Partials.GuildMember],
 });
 
 client.commands = new Collection();

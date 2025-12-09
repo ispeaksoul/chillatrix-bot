@@ -12,60 +12,65 @@ module.exports = {
       try {
         message = await message.fetch();
       } catch (error) {
-        console.error("❌ Failed to fetch partial message:", error);
+        console.error("Failed to fetch partial message:", error);
         return;
       }
     }
 
     if (message.author.bot) return;
 
-    // Check for DM
     if (message.channel.type === 1) {
-      const modChannel = await client.channels.fetch(
-        process.env.MOD_CHANNEL_ID,
-      );
-      if (!modChannel) return;
+      try {
+        const modChannelId = process.env.MOD_CHANNEL_ID;
+        if (!modChannelId) {
+          console.error("MOD_CHANNEL_ID not set in environment variables");
+          return;
+        }
 
-      const embed = new EmbedBuilder()
-        .setTitle(`📨 New DM from ${message.author.tag}`)
-        .setDescription(message.content || "*No text content*")
-        .setColor("Blue")
-        .setFooter({ text: `User ID: ${message.author.id}` })
-        .setTimestamp();
+        const modChannel = await client.channels.fetch(modChannelId);
+        if (!modChannel) {
+          console.error("Could not find mod channel with ID:", modChannelId);
+          return;
+        }
 
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId(`reply_${message.author.id}`)
-          .setLabel("Reply")
-          .setStyle(ButtonStyle.Primary),
-      );
+        const embed = new EmbedBuilder()
+          .setTitle(`📨 New DM from ${message.author.tag}`)
+          .setDescription(message.content || "*No text content*")
+          .setColor("Blue")
+          .setFooter({ text: `User ID: ${message.author.id}` })
+          .setTimestamp();
 
-      await modChannel.send({ embeds: [embed], components: [row] });
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId(`reply_${message.author.id}`)
+            .setLabel("Reply")
+            .setStyle(ButtonStyle.Primary),
+        );
+
+        await modChannel.send({ embeds: [embed], components: [row] });
+      } catch (error) {
+        console.error("Failed to forward DM to mod channel:", error.message);
+      }
+      return;
     }
-
-    if (message.author.bot) return;
 
     const stickyData = client.stickyMessages?.get(message.channel.id);
     if (!stickyData) return;
 
     try {
-      // Delete previous sticky message
       const prevStickyMsg = await message.channel.messages.fetch(
         stickyData.messageId,
       );
       if (prevStickyMsg) await prevStickyMsg.delete();
 
-      // Send new sticky message
       const newStickyMsg = await message.channel.send(stickyData.content);
 
-      // Update stored sticky message ID
       client.stickyMessages.set(message.channel.id, {
         messageId: newStickyMsg.id,
         content: stickyData.content,
       });
     } catch (err) {
-      // Handle missing messages or permissions errors silently
-      console.error("Sticky message update error:", err);
+      console.error("Sticky message update error:", err.message);
     }
   },
 };

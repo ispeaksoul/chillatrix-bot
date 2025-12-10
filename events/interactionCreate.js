@@ -1,5 +1,5 @@
 const { hasRequiredRole, hasAdminPermission } = require('../utils/permissions');
-const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, MessageFlags } = require('discord.js');
+const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, MessageFlags, EmbedBuilder } = require('discord.js');
 
 module.exports = {
   name: 'interactionCreate',
@@ -34,7 +34,7 @@ module.exports = {
 
       const modal = new ModalBuilder()
         .setCustomId(`modal_reply_${userId}`)
-        .setTitle(`Reply to ${userId}`);
+        .setTitle('Reply to User');
 
       const input = new TextInputBuilder()
         .setCustomId('reply_message')
@@ -55,14 +55,22 @@ module.exports = {
       try {
         const user = await client.users.fetch(userId);
         await user.send(`📬 **Reply from the team:**\n${replyContent}`);
-        await interaction.reply({ content: `✅ Replied to ${user.tag}`, flags: MessageFlags.Ephemeral });
+
+        const replyEmbed = new EmbedBuilder()
+          .setTitle(`📤 Reply sent to ${user.tag}`)
+          .setDescription(replyContent)
+          .setColor("Green")
+          .setFooter({ text: `Replied by ${interaction.user.tag}` })
+          .setTimestamp();
+
+        await interaction.reply({ embeds: [replyEmbed] });
       } catch (err) {
         console.error('Failed to send DM:', err);
         try {
           if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({ content: '❌ Could not DM the user.', flags: MessageFlags.Ephemeral });
+            await interaction.followUp({ content: '❌ Could not DM the user. They may have DMs disabled.', flags: MessageFlags.Ephemeral });
           } else {
-            await interaction.reply({ content: '❌ Could not DM the user.', flags: MessageFlags.Ephemeral });
+            await interaction.reply({ content: '❌ Could not DM the user. They may have DMs disabled.', flags: MessageFlags.Ephemeral });
           }
         } catch (replyError) {
           console.error('Failed to send error reply:', replyError);
